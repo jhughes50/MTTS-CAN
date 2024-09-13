@@ -11,11 +11,18 @@ import matplotlib.pyplot as plt
 from scipy.signal import butter
 from inference_preprocess import preprocess_raw_video, detrend
 
+def find_peaks(signal, threshold=0):
+    peaks = 0
+    for i in range(1, len(signal) - 1):
+        if signal[i] > signal[i-1] and signal[i] > signal[i+1] and signal[i] > threshold:
+            peaks += 1
+    return peaks
+
 def predict_vitals(args):
     img_rows = 36
     img_cols = 36
     frame_depth = 10
-    model_checkpoint = './mtts_can.hdf5'
+    model_checkpoint = '/home/jason/MTTS-CAN/mtts_can.hdf5'
     batch_size = args.batch_size
     fs = args.sampling_rate
     sample_data_path = args.video_path
@@ -41,6 +48,10 @@ def predict_vitals(args):
     [b_resp, a_resp] = butter(1, [0.08 / fs * 2, 0.5 / fs * 2], btype='bandpass')
     resp_pred = scipy.signal.filtfilt(b_resp, a_resp, np.double(resp_pred))
 
+    peaks = scipy.signal.find_peaks(pulse_pred, distance=10)
+    time = 60 / 16
+    print("HR BPM: ", len(peaks[0])*time)
+
     ########## Plot ##################
     plt.subplot(211)
     plt.plot(pulse_pred)
@@ -48,7 +59,7 @@ def predict_vitals(args):
     plt.subplot(212)
     plt.plot(resp_pred)
     plt.title('Resp Prediction')
-    plt.show()
+    plt.savefig("vitals.png")
 
 
 if __name__ == "__main__":
